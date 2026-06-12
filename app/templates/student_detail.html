@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} · 学员详情{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/students">学员管理</a><span>/</span><span>{{ student.name }}</span></div>
+<div class="page-heading student-heading">
+  <div>
+    <p class="eyebrow">学员档案</p>
+    <h1>{{ student.name }}</h1>
+    <p class="heading-note">{{ student.phone }} · <span class="mono">{{ student.id_number|mask_id }}</span></p>
+  </div>
+  <div class="compact-metrics">
+    <div><span>实际收款</span><strong>¥{{ actual_total }}</strong></div>
+    <div><span>退款</span><strong>¥{{ refund_total }}</strong></div>
+    <div class="net"><span>净额</span><strong>¥{{ actual_total-refund_total }}</strong></div>
+  </div>
+</div>
+
+<div class="detail-layout">
+  <div class="primary-column">
+    <section class="workspace-section">
+      <div class="section-heading">
+        <div><h2>新增缴费草稿</h2><p>填写培训信息与收付款金额，保存后进入独立确认。</p></div>
+      </div>
+      <form method="post" action="/students/{{ student.id }}/payments" class="form-grid form-grid-2">
+        <label>培训期数<input name="training_period_text" required></label>
+        <label>地址<input name="address" required></label>
+        <label>收款金额<input name="receipt_amount" type="number" min="0" step="0.01" required></label>
+        <label>返点金额<input name="rebate_amount" type="number" min="0" step="0.01" value="0" required></label>
+        <label>转培训成本<input name="transfer_cost_amount" type="number" min="0" step="0.01" value="0" required></label>
+        <label>缴费日期<input name="payment_date" type="date" value="{{ today }}" required></label>
+        <label>支付方式<input name="payment_method" required></label>
+        <label>备注<input name="note"></label>
+        <div class="form-actions"><button class="button button-primary">保存并进入确认</button></div>
+      </form>
+    </section>
+
+    <section class="workspace-section">
+      <div class="section-heading"><div><h2>缴费记录</h2><p>草稿、已入账和已作废记录均保留。</p></div></div>
+      <div class="record-list">
+      {% for p in student.payments|sort(attribute='created_at', reverse=true) %}
+        <article class="record-item">
+          <div class="record-main">
+            <div class="record-amount">
+              <strong>¥{{ p.actual_received_amount }}</strong>
+              <span class="status status-{{ p.status.value|lower }}">{{ p.status.value }}</span>
+            </div>
+            <div class="record-meta">{{ p.training_period_text }} · {{ p.address }}</div>
+            <div class="record-meta">{{ p.payment_date }} · {{ p.payment_method }}</div>
+          </div>
+          <div class="record-actions">
+            <a class="button button-secondary" href="/payments/{{ p.id }}">查看详情</a>
+            {% if p.status.value == 'DRAFT' %}
+              <a class="button button-primary" href="/payments/{{ p.id }}/confirm">继续确认</a>
+            {% elif p.status.value == 'POSTED' %}
+              <form method="post" action="/payments/{{ p.id }}/void" class="compact-form">
+                <input name="reason" placeholder="填写作废原因" required>
+                <button class="button button-danger">作废缴费</button>
+              </form>
+            {% endif %}
+          </div>
+          {% if p.status.value == 'POSTED' %}
+          <form method="post" action="/payments/{{ p.id }}/refunds" class="refund-form">
+            <strong>新增退款</strong>
+            <input name="amount" type="number" min="0" step="0.01" placeholder="退款金额" required>
+            <input name="refund_date" type="date" value="{{ today }}" required>
+            <input name="reason" placeholder="退款原因" required>
+            <button class="button button-secondary">创建退款草稿</button>
+          </form>
+          {% endif %}
+          {% for r in p.refunds %}
+          <div class="refund-row">
+            <div><span class="status status-{{ r.status.value|lower }}">{{ r.status.value }}</span><strong>退款 ¥{{ r.amount }}</strong><small>{{ r.refund_date }} · {{ r.reason }}</small></div>
+            {% if r.status.value == 'DRAFT' %}
+              <a class="text-action" href="/refunds/{{ r.id }}/confirm">继续确认</a>
+            {% elif r.status.value == 'POSTED' %}
+              <form method="post" action="/refunds/{{ r.id }}/void" class="compact-form">
+                <input name="reason" placeholder="作废原因" required>
+                <button class="button button-danger-subtle">作废退款</button>
+              </form>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </article>
+      {% else %}
+        <div class="empty-state"><strong>暂无缴费记录</strong><span>使用上方表单创建第一笔缴费草稿。</span></div>
+      {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="secondary-column">
+    <section class="side-section">
+      <div class="section-heading"><div><h2>操作记录</h2><p>最近 20 条</p></div></div>
+      <div class="audit-list">
+      {% for a in audits %}
+        <div class="audit-item"><span>{{ a.action }}</span><small>{{ a.created_at }}</small></div>
+      {% else %}
+        <div class="empty-state compact"><span>暂无操作记录</span></div>
+      {% endfor %}
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

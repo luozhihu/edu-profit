@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}学员管理 · 培训财务管理{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">档案管理</p>
+    <h1>学员管理</h1>
+    <p class="heading-note">手机号允许重复，身份证号保持唯一。</p>
+  </div>
+  <form class="search-form">
+    <label class="sr-only" for="student-search">搜索学员</label>
+    <input id="student-search" name="q" value="{{ q }}" placeholder="搜索姓名或手机号">
+    <button class="button button-secondary">搜索</button>
+  </form>
+</div>
+
+<section class="workspace-section">
+  <div class="section-heading">
+    <div><h2>新增学员</h2><p>创建基础身份档案，培训信息在缴费时录入。</p></div>
+  </div>
+  <form method="post" class="form-grid form-grid-3">
+    <label>姓名<input name="name" required></label>
+    <label>手机号<input name="phone" required></label>
+    <label>身份证号<input name="id_number" required></label>
+    <div class="form-actions"><button class="button button-primary">新增学员</button></div>
+  </form>
+</section>
+
+<section class="workspace-section">
+  <div class="section-heading"><div><h2>学员列表</h2><p>共 {{ students|length }} 名学员</p></div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>姓名</th><th>手机号</th><th>身份证号</th><th>状态</th><th class="action-column">操作</th></tr></thead>
+      <tbody>
+      {% for s in students %}
+        <tr>
+          <td><strong>{{ s.name }}</strong></td>
+          <td>{{ s.phone }}</td>
+          <td class="mono">{{ s.id_number|mask_id }}</td>
+          <td><span class="status status-{{ s.status.value|lower }}">{{ s.status.value }}</span></td>
+          <td class="action-column"><a class="text-action" href="/students/{{ s.id }}">查看详情</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5"><div class="empty-state"><strong>没有匹配学员</strong><span>调整搜索条件或新增学员。</span></div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

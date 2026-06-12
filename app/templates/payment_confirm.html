@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}确认缴费入账 · 培训财务管理{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/students/{{ payment.student_id }}">学员详情</a><span>/</span><span>确认缴费入账</span></div>
+<div class="page-heading"><div><p class="eyebrow">独立确认</p><h1>确认缴费入账</h1><p class="heading-note">核对草稿与原始凭证，并重新输入三项金额。</p></div></div>
+<div class="confirm-layout">
+  <div>
+    <section class="workspace-section">
+      <div class="section-heading"><div><h2>缴费信息</h2><p>确认学员和培训信息无误。</p></div></div>
+      <dl class="detail-grid">
+        <div><dt>学员</dt><dd>{{ payment.student.name }}</dd></div>
+        <div><dt>身份证号</dt><dd class="mono">{{ payment.student.id_number|mask_id }}</dd></div>
+        <div><dt>培训期数</dt><dd>{{ payment.training_period_text }}</dd></div>
+        <div><dt>地址</dt><dd>{{ payment.address }}</dd></div>
+      </dl>
+    </section>
+    <section class="workspace-section">
+      <div class="section-heading"><div><h2>缴费凭证</h2><p>支持 JPG、PNG 和 PDF，可一次上传多个文件。</p></div></div>
+      <form method="post" action="/payments/{{ payment.id }}/attachments" enctype="multipart/form-data" class="upload-form">
+        <input type="file" name="files" multiple accept="image/png,image/jpeg,application/pdf" required>
+        <button class="button button-secondary">上传附件</button>
+      </form>
+      <div class="attachment-list">
+      {% for a in attachments %}
+        <a href="/attachments/{{ a.id }}"><span>{{ a.original_name }}</span><span class="status status-{{ a.status.value|lower }}">{{ a.status.value }}</span></a>
+      {% else %}
+        <div class="empty-state compact"><span>尚未上传缴费凭证</span></div>
+      {% endfor %}
+      </div>
+    </section>
+  </div>
+  <section class="confirm-panel">
+    <div class="confirm-draft-summary">
+      <div class="section-heading"><div><h2>草稿金额</h2><p>请先与原始凭证核对。</p></div></div>
+      <dl class="confirm-amounts">
+        <div><dt>收款金额</dt><dd>¥{{ payment.receipt_amount }}</dd></div>
+        <div><dt>返点金额</dt><dd>¥{{ payment.rebate_amount }}</dd></div>
+        <div><dt>转培训成本</dt><dd>¥{{ payment.transfer_cost_amount }}</dd></div>
+        <div class="confirm-amount-total"><dt>实际收款</dt><dd>¥{{ payment.actual_received_amount }}</dd></div>
+      </dl>
+    </div>
+    <div class="section-heading"><div><h2>重新输入金额</h2><p>三项金额必须与草稿完全一致。</p></div></div>
+    <form method="post" class="stack-form">
+      <label>收款金额<input name="receipt_amount" type="number" min="0" step="0.01" required autofocus></label>
+      <label>返点金额<input name="rebate_amount" type="number" min="0" step="0.01" required></label>
+      <label>转培训成本<input name="transfer_cost_amount" type="number" min="0" step="0.01" required></label>
+      <button class="button button-primary button-full">正式入账</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}确认退款入账 · 培训财务管理{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/students/{{ refund.payment.student_id }}">学员详情</a><span>/</span><span>确认退款入账</span></div>
+<div class="page-heading"><div><p class="eyebrow">独立确认</p><h1>确认退款入账</h1><p class="heading-note">对照退款凭证确认金额和关联缴费。</p></div></div>
+<div class="confirm-layout">
+  <div>
+    <section class="workspace-section">
+      <div class="section-heading"><div><h2>关联缴费</h2><p>退款将计入以下缴费记录。</p></div></div>
+      <dl class="detail-grid">
+        <div><dt>学员</dt><dd>{{ refund.payment.student.name }}</dd></div>
+        <div><dt>缴费日期</dt><dd>{{ refund.payment.payment_date }}</dd></div>
+        <div><dt>实际收款</dt><dd>¥{{ refund.payment.actual_received_amount }}</dd></div>
+        <div><dt>剩余可退</dt><dd class="positive">¥{{ remaining }}</dd></div>
+      </dl>
+    </section>
+    <section class="workspace-section">
+      <div class="section-heading"><div><h2>退款凭证</h2><p>支持 JPG、PNG 和 PDF。</p></div></div>
+      <form method="post" action="/refunds/{{ refund.id }}/attachments" enctype="multipart/form-data" class="upload-form">
+        <input type="file" name="files" multiple accept="image/png,image/jpeg,application/pdf" required>
+        <button class="button button-secondary">上传附件</button>
+      </form>
+      <div class="attachment-list">
+      {% for a in attachments %}
+        <a href="/attachments/{{ a.id }}"><span>{{ a.original_name }}</span><span class="status status-{{ a.status.value|lower }}">{{ a.status.value }}</span></a>
+      {% else %}
+        <div class="empty-state compact"><span>尚未上传退款凭证</span></div>
+      {% endfor %}
+      </div>
+    </section>
+  </div>
+  <section class="confirm-panel">
+    <div class="section-heading"><div><h2>重新输入退款金额</h2><p>金额不能超过剩余可退金额。</p></div></div>
+    <form method="post" class="stack-form">
+      <label>本次退款金额<input name="amount" type="number" min="0" step="0.01" required autofocus></label>
+      <button class="button button-primary button-full">正式入账</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

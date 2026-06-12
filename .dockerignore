@@ -1,0 +1,12 @@
+.env
+.env.production
+.git
+.gstack
+.pytest_cache
+.ruff_cache
+.venv
+__pycache__
+data
+test-results
+uploads
+*.pyc

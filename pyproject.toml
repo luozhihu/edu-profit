@@ -1,0 +1,32 @@
+[project]
+name = "edu-profit"
+version = "0.1.0"
+description = "Internal student payment and refund management"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "itsdangerous>=2.2,<3",
+  "jinja2>=3.1,<4",
+  "python-multipart>=0.0.20,<1",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.3,<9",
+  "pytest-cov>=6,<7",
+  "ruff>=0.11,<1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["B008", "E501"]

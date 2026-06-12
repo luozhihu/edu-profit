@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}缴费详情 · {{ payment.student.name }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/students/{{ payment.student_id }}">学员详情</a><span>/</span><span>缴费详情</span></div>
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">缴费记录</p>
+    <h1>缴费详情</h1>
+    <p class="heading-note">{{ payment.student.name }} · {{ payment.payment_date }}</p>
+  </div>
+  {% if payment.status.value == 'DRAFT' %}
+    <a class="button button-primary" href="/payments/{{ payment.id }}/confirm">继续确认</a>
+  {% endif %}
+</div>
+
+<div class="detail-layout">
+  <div class="primary-column">
+    <section class="workspace-section">
+      <div class="section-heading"><div><h2>金额明细</h2><p>实际收款 = 收款金额 - 返点金额 - 转培训成本。</p></div></div>
+      <div class="metric-strip payment-detail-metrics">
+        <div class="metric-item metric-income"><span>收款金额</span><strong>¥{{ payment.receipt_amount }}</strong></div>
+        <div class="metric-item metric-expense"><span>返点金额</span><strong>¥{{ payment.rebate_amount }}</strong></div>
+        <div class="metric-item metric-payable"><span>转培训成本</span><strong>¥{{ payment.transfer_cost_amount }}</strong></div>
+        <div class="metric-item metric-balance"><span>实际收款</span><strong>¥{{ payment.actual_received_amount }}</strong></div>
+      </div>
+    </section>
+
+    <section class="workspace-section">
+      <div class="section-heading"><div><h2>缴费信息</h2><p>该记录的培训和支付信息。</p></div></div>
+      <dl class="detail-grid">
+        <div><dt>状态</dt><dd><span class="status status-{{ payment.status.value|lower }}">{{ payment.status.value }}</span></dd></div>
+        <div><dt>培训期数</dt><dd>{{ payment.training_period_text or "—" }}</dd></div>
+        <div><dt>地址</dt><dd>{{ payment.address or "—" }}</dd></div>
+        <div><dt>缴费日期</dt><dd>{{ payment.payment_date }}</dd></div>
+        <div><dt>支付方式</dt><dd>{{ payment.payment_method or "—" }}</dd></div>
+        <div><dt>备注</dt><dd>{{ payment.note or "—" }}</dd></div>
+        <div><dt>创建时间</dt><dd>{{ payment.created_at }}</dd></div>
+        <div><dt>确认时间</dt><dd>{{ payment.confirmed_at or "—" }}</dd></div>
+        <div><dt>作废原因</dt><dd>{{ payment.void_reason or "—" }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="workspace-section">
+      <div class="section-heading"><div><h2>退款记录</h2><p>与该笔缴费关联的全部退款。</p></div></div>
+      <div class="refund-detail-list">
+      {% for refund in payment.refunds|sort(attribute='created_at', reverse=true) %}
+        <div class="refund-row">
+          <div>
+            <span class="status status-{{ refund.status.value|lower }}">{{ refund.status.value }}</span>
+            <strong>退款 ¥{{ refund.amount }}</strong>
+            <small>{{ refund.refund_date }} · {{ refund.reason }}</small>
+          </div>
+          {% if refund.status.value == 'DRAFT' %}
+            <a class="text-action" href="/refunds/{{ refund.id }}/confirm">继续确认</a>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty-state compact"><span>暂无关联退款</span></div>
+      {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="secondary-column">
+    <section class="side-section">
+      <div class="section-heading"><div><h2>缴费凭证</h2><p>共 {{ attachments|length }} 个附件</p></div></div>
+      <div class="attachment-list">
+      {% for attachment in attachments %}
+        <a href="/attachments/{{ attachment.id }}">
+          <span>{{ attachment.original_name }}</span>
+          <span class="status status-{{ attachment.status.value|lower }}">{{ attachment.status.value }}</span>
+        </a>
+      {% else %}
+        <div class="empty-state compact"><span>暂无缴费凭证</span></div>
+      {% endfor %}
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

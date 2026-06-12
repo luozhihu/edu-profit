@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}培训财务管理{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  {% if user %}
+  <header class="app-header">
+    <div class="header-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">财</span>
+        <span>培训财务管理</span>
+      </a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="/" {% if request.url.path == "/" %}aria-current="page"{% endif %}>首页</a>
+        <a href="/students" {% if request.url.path.startswith("/students") %}aria-current="page"{% endif %}>学员管理</a>
+      </nav>
+      <form action="/logout" method="post" class="account-action">
+        <span>{{ user.username }}</span>
+        <button class="button button-quiet" type="submit">退出</button>
+      </form>
+    </div>
+  </header>
+  {% endif %}
+  <main class="page-shell">
+    {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

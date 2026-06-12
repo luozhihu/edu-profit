@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}首页 · 培训财务管理{% endblock %}
+{% block content %}
+<div class="dashboard-heading">
+  <p class="eyebrow">财务概览</p>
+  <h1>经营数据</h1>
+  <p class="heading-note">当前收支、待付账款与结余。</p>
+</div>
+
+<section class="dashboard-summary" aria-label="财务指标">
+  <header class="dashboard-summary-header">
+    <div>
+      <h2>财务总览</h2>
+      <p>金额根据缴费确认状态自动汇总</p>
+    </div>
+    <a class="text-action" href="/students">学员管理</a>
+  </header>
+  <div class="dashboard-metrics">
+    <div class="dashboard-metric metric-income">
+      <span>收入</span>
+      <strong>¥{{ income }}</strong>
+      <small>已确认收款金额</small>
+    </div>
+    <div class="dashboard-metric metric-expense">
+      <span>支出</span>
+      <strong>¥{{ expense }}</strong>
+      <small>返点 + 转培训成本</small>
+    </div>
+    <div class="dashboard-metric metric-payable">
+      <span>待付账款</span>
+      <strong>¥{{ payable }}</strong>
+      <small>待确认收入 - 返点 - 转培训成本</small>
+    </div>
+    <div class="dashboard-metric metric-balance">
+      <span>结余</span>
+      <strong>¥{{ balance }}</strong>
+      <small>已确认收入 - 返点 - 转培训成本</small>
+    </div>
+  </div>
+</section>
+{% endblock %}
