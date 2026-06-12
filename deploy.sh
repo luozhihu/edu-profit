@@ -46,29 +46,37 @@ ensure_docker() {
   elif command -v dnf >/dev/null 2>&1 || command -v yum >/dev/null 2>&1; then
     local package_manager
     package_manager="$(command -v dnf || command -v yum)"
-    run_root "$package_manager" install -y ca-certificates curl
+    local -a rpm_options=(
+      --setopt=retries=10
+      --setopt=timeout=120
+      --setopt=minrate=1
+    )
+    run_root "$package_manager" "${rpm_options[@]}" install -y ca-certificates curl
 
-    # Alibaba Cloud Linux commonly provides Docker directly in its system repository.
-    if ! run_root "$package_manager" install -y docker docker-compose-plugin; then
-      if ! run_root "$package_manager" install -y dnf-plugins-core; then
-        run_root "$package_manager" install -y yum-utils
-      fi
-      if ! run_root "$package_manager" config-manager --add-repo \
-        https://download.docker.com/linux/centos/docker-ce.repo; then
-        run_root yum-config-manager --add-repo \
-          https://download.docker.com/linux/centos/docker-ce.repo
-      fi
-      run_root "$package_manager" install -y \
-        docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    if ! run_root "$package_manager" "${rpm_options[@]}" install -y dnf-plugins-core; then
+      run_root "$package_manager" "${rpm_options[@]}" install -y yum-utils
     fi
+    if ! run_root "$package_manager" config-manager --add-repo \
+      https://download.docker.com/linux/centos/docker-ce.repo; then
+      run_root yum-config-manager --add-repo \
+        https://download.docker.com/linux/centos/docker-ce.repo
+    fi
+    run_root "$package_manager" "${rpm_options[@]}" --setopt=install_weak_deps=False install -y \
+      docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   else
     fail "未检测到受支持的包管理器。请先安装 Docker Engine 和 Docker Compose 插件。"
   fi
 
   if command -v systemctl >/dev/null 2>&1; then
-    run_root systemctl enable --now docker
+    if systemctl list-unit-files | grep -q '^docker\.service'; then
+      run_root systemctl enable --now docker
+    elif systemctl list-unit-files | grep -q '^podman\.service'; then
+      run_root systemctl enable --now podman
+    else
+      log "未找到 docker.service，跳过服务启动。"
+    fi
   elif command -v service >/dev/null 2>&1; then
-    run_root service docker start
+    run_root service docker start || true
   fi
 
   command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 ||
