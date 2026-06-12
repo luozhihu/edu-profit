@@ -1,13 +1,10 @@
-FROM ghcr.io/astral-sh/uv:0.11.3 AS uv
-
-FROM python:3.11-slim
+FROM ghcr.io/astral-sh/uv:0.11.3
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY --from=uv /uv /uvx /bin/
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
