@@ -42,8 +42,8 @@ make lint
 
 ## 服务器一键部署
 
-支持 Ubuntu/Debian 服务器。脚本会自动安装 Docker、生成生产密钥、启动应用，
-并持久化 SQLite 数据库与附件。
+支持 Ubuntu/Debian、CentOS/RHEL 和 Alibaba Cloud Linux 服务器。脚本会自动安装
+Docker、生成生产密钥、启动应用，并持久化 SQLite 数据库与附件。
 
 ```bash
 chmod +x deploy.sh

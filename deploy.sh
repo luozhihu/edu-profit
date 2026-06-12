@@ -37,17 +37,42 @@ ensure_docker() {
     return
   fi
 
-  command -v apt-get >/dev/null 2>&1 ||
-    fail "未检测到 Docker。自动安装目前仅支持 Ubuntu/Debian，请先安装 Docker Compose。"
-
   log "安装 Docker 和 Docker Compose"
-  run_root apt-get update
-  if ! run_root apt-get install -y docker.io docker-compose-v2; then
-    run_root apt-get install -y docker.io docker-compose-plugin
+  if command -v apt-get >/dev/null 2>&1; then
+    run_root apt-get update
+    if ! run_root apt-get install -y docker.io docker-compose-v2; then
+      run_root apt-get install -y docker.io docker-compose-plugin
+    fi
+  elif command -v dnf >/dev/null 2>&1 || command -v yum >/dev/null 2>&1; then
+    local package_manager
+    package_manager="$(command -v dnf || command -v yum)"
+    run_root "$package_manager" install -y ca-certificates curl
+
+    # Alibaba Cloud Linux commonly provides Docker directly in its system repository.
+    if ! run_root "$package_manager" install -y docker docker-compose-plugin; then
+      if ! run_root "$package_manager" install -y dnf-plugins-core; then
+        run_root "$package_manager" install -y yum-utils
+      fi
+      if ! run_root "$package_manager" config-manager --add-repo \
+        https://download.docker.com/linux/centos/docker-ce.repo; then
+        run_root yum-config-manager --add-repo \
+          https://download.docker.com/linux/centos/docker-ce.repo
+      fi
+      run_root "$package_manager" install -y \
+        docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    fi
+  else
+    fail "未检测到受支持的包管理器。请先安装 Docker Engine 和 Docker Compose 插件。"
   fi
+
   if command -v systemctl >/dev/null 2>&1; then
     run_root systemctl enable --now docker
+  elif command -v service >/dev/null 2>&1; then
+    run_root service docker start
   fi
+
+  command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 ||
+    fail "Docker 安装完成，但 Docker Compose 插件不可用。"
 }
 
 docker_compose() {
