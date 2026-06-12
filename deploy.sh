@@ -4,6 +4,8 @@ set -Eeuo pipefail
 PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="$PROJECT_DIR/docker-compose.production.yml"
 ENV_FILE="$PROJECT_DIR/.env.production"
+SERVICE_NAME="edu-profit"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 log() {
   printf '\n[%s] %s\n' "$(date '+%H:%M:%S')" "$*"
@@ -113,6 +115,72 @@ docker_compose() {
   fi
 }
 
+install_uv() {
+  if command -v uv >/dev/null 2>&1; then
+    return
+  fi
+
+  log "安装 uv"
+  run_root mkdir -p /root/.cache
+  local installer
+  installer="$(mktemp)"
+  curl -fsSL https://astral.sh/uv/install.sh -o "$installer"
+  run_root env UV_INSTALL_DIR=/usr/local/bin bash "$installer"
+  rm -f "$installer"
+}
+
+ensure_python() {
+  if uv python find 3.11 >/dev/null 2>&1; then
+    return
+  fi
+  log "安装 Python 3.11"
+  uv python install 3.11
+}
+
+deploy_host() {
+  log "切换到主机部署模式"
+  install_uv
+  ensure_python
+
+  mkdir -p "$PROJECT_DIR/data" "$PROJECT_DIR/uploads"
+  # shellcheck disable=SC1090
+  set -a
+  . "$ENV_FILE"
+  set +a
+  uv sync --frozen --no-dev --no-install-project
+  APP_ENV=production \
+  DATABASE_URL="sqlite:///$PROJECT_DIR/data/edu_profit.db" \
+  UPLOAD_DIR="$PROJECT_DIR/uploads" \
+  BOOTSTRAP_ADMIN_USERNAME="${BOOTSTRAP_ADMIN_USERNAME:-admin}" \
+  BOOTSTRAP_ADMIN_PASSWORD="${BOOTSTRAP_ADMIN_PASSWORD:-}" \
+  ./.venv/bin/python -m app.bootstrap
+
+  cat >"$SERVICE_FILE" <<EOF
+[Unit]
+Description=edu-profit
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$PROJECT_DIR
+EnvironmentFile=$ENV_FILE
+Environment=APP_ENV=production
+ExecStart=$PROJECT_DIR/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${APP_PORT:-8000} --proxy-headers
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  if command -v systemctl >/dev/null 2>&1; then
+    run_root systemctl daemon-reload
+    run_root systemctl enable --now "$SERVICE_NAME"
+  else
+    fail "主机部署需要 systemd。当前系统未检测到 systemctl。"
+  fi
+}
+
 write_env() {
   if [ -f "$ENV_FILE" ]; then
     log "保留现有生产配置：$ENV_FILE"
@@ -179,16 +247,39 @@ wait_for_health() {
   fail "应用健康检查失败。"
 }
 
+wait_for_local_health() {
+  local port="${APP_PORT:-8000}"
+  for _ in $(seq 1 36); do
+    if curl -fsS "http://127.0.0.1:${port}/health" >/dev/null 2>&1; then
+      return
+    fi
+    sleep 5
+  done
+  journalctl -u "$SERVICE_NAME" --no-pager -n 120 2>/dev/null || true
+  fail "本机健康检查失败。"
+}
+
 main() {
   [ -f "$COMPOSE_FILE" ] || fail "找不到 $COMPOSE_FILE"
-  ensure_docker
   write_env
 
-  log "构建并启动服务"
-  docker_compose up -d --build --remove-orphans
+  if [ "${DEPLOY_MODE:-host}" = "docker" ]; then
+    ensure_docker
+    log "构建并启动服务"
+    if ! docker_compose up -d --build --remove-orphans; then
+      log "Docker 方案失败，切换到主机部署模式"
+      deploy_host
+    fi
+  else
+    deploy_host
+  fi
 
   log "等待应用健康检查"
-  wait_for_health
+  if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+    wait_for_local_health
+  else
+    wait_for_health
+  fi
 
   local port
   port="$(awk -F= '$1=="APP_PORT"{print $2}' "$ENV_FILE")"

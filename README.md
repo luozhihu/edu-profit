@@ -42,8 +42,15 @@ make lint
 
 ## 服务器一键部署
 
-支持 Ubuntu/Debian、CentOS/RHEL 和 Alibaba Cloud Linux 服务器。脚本会自动安装
-Docker、生成生产密钥、启动应用，并持久化 SQLite 数据库与附件。
+支持 Ubuntu/Debian、CentOS/RHEL 和 Alibaba Cloud Linux 服务器。默认使用主机
+`systemd` 模式，自动安装 `uv`、生成生产密钥、启动应用，并持久化 SQLite
+数据库与附件。
+
+如需强制使用 Docker，可显式设置：
+
+```bash
+DEPLOY_MODE=docker ./deploy.sh
+```
 
 ```bash
 chmod +x deploy.sh
