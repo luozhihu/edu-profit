@@ -32,8 +32,17 @@ random_hex() {
   fi
 }
 
+docker_uses_podman() {
+  docker --version 2>/dev/null | grep -qi podman && return 0
+  docker info 2>&1 | grep -qi 'Emulate Docker CLI using podman' && return 0
+  return 1
+}
+
 ensure_docker() {
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    if docker_uses_podman; then
+      fail "当前 docker 命令仍指向 Podman。请先移除 podman-docker 并重新执行 ./deploy.sh。"
+    fi
     return
   fi
 
@@ -72,7 +81,7 @@ ensure_docker() {
     fail "未检测到受支持的包管理器。请先安装 Docker Engine 和 Docker Compose 插件。"
   fi
 
-  if docker info 2>/dev/null | grep -q 'Emulate Docker CLI using podman'; then
+  if docker_uses_podman; then
     fail "当前系统仍在使用 Podman 的 docker 兼容层。请先移除 podman-docker 后重新执行 ./deploy.sh。"
   fi
 
@@ -93,7 +102,9 @@ ensure_docker() {
 }
 
 docker_compose() {
-  if docker info >/dev/null 2>&1; then
+  if docker_uses_podman; then
+    fail "当前 docker 命令仍指向 Podman。请先移除 podman-docker 后重新执行 ./deploy.sh。"
+  elif docker info >/dev/null 2>&1; then
     docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
   elif command -v sudo >/dev/null 2>&1; then
     sudo docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
@@ -150,12 +161,15 @@ wait_for_health() {
 
   for _ in $(seq 1 36); do
     status="$(
-      if docker info >/dev/null 2>&1; then
+      if docker_uses_podman; then
+        echo podman
+      elif docker info >/dev/null 2>&1; then
         docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id"
       else
         sudo docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id"
       fi
     )"
+    [ "$status" = "podman" ] && fail "当前 docker 命令仍指向 Podman。请先移除 podman-docker。"
     [ "$status" = "healthy" ] && return
     [ "$status" = "unhealthy" ] && break
     sleep 5
