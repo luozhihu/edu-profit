@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-RUN ["uv", "sync", "--frozen", "--no-dev", "--no-install-project"]
+RUN ["/uv", "sync", "--frozen", "--no-dev", "--no-install-project"]
 
 COPY app ./app
 
