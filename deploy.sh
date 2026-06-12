@@ -53,6 +53,11 @@ ensure_docker() {
     )
     run_root "$package_manager" "${rpm_options[@]}" install -y ca-certificates curl
 
+    if rpm -q podman-docker >/dev/null 2>&1; then
+      log "移除 podman-docker，避免 docker 命令指向 Podman 兼容层"
+      run_root "$package_manager" "${rpm_options[@]}" remove -y podman-docker
+    fi
+
     if ! run_root "$package_manager" "${rpm_options[@]}" install -y dnf-plugins-core; then
       run_root "$package_manager" "${rpm_options[@]}" install -y yum-utils
     fi
@@ -65,6 +70,10 @@ ensure_docker() {
       docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   else
     fail "未检测到受支持的包管理器。请先安装 Docker Engine 和 Docker Compose 插件。"
+  fi
+
+  if docker info 2>/dev/null | grep -q 'Emulate Docker CLI using podman'; then
+    fail "当前系统仍在使用 Podman 的 docker 兼容层。请先移除 podman-docker 后重新执行 ./deploy.sh。"
   fi
 
   if command -v systemctl >/dev/null 2>&1; then
